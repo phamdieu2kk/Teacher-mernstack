@@ -1,25 +1,16 @@
-// src/api/teacherApi.js
-import axios from 'axios';
-
-const BASE_URL = 'http://localhost:5000/api/teachers';
+import axiosClient from './axiosClient';
 
 const teacherApi = {
-  getAllTeachers: async () => {
-    const res = await axios.get('http://localhost:5000/api/teachers');
-    return res.data;
+  getAll: (params) => axiosClient.get('/teachers', { params }),
+  getById: (id) => axiosClient.get(`/teachers/${id}`),
+
+  create: async (data) => {
+    const response = await axiosClient.post('/teachers', data);
+    return response;
   },
-  createTeacher: async (data) => {
-    const res = await axios.post(BASE_URL, data);
-    return res.data;
-  },
-  updateTeacher: async (id, data) => {
-    const res = await axios.put(`${BASE_URL}/${id}`, data);
-    return res.data;
-  },
-  deleteTeacher: async (id) => {
-    const res = await axios.delete(`${BASE_URL}/${id}`);
-    return res.data;
-  },
+
+  update: (id, data) => axiosClient.put(`/teachers/${id}`, data),
+  delete: (id) => axiosClient.delete(`/teachers/${id}`),
 };
 
-export default teacherApi; // 👈 cần DÒNG NÀY!
+export default teacherApi;

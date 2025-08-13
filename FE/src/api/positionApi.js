@@ -1,12 +1,16 @@
-// src/api/positionApi.js
 import axiosClient from './axiosClient';
 
 const positionApi = {
-  getAll: () => axiosClient.get('/positions'),
-  getById: (id) => axiosClient.get(`/positions/${id}`),
-  create: (data) => axiosClient.post('/positions', data),
-  update: (id, data) => axiosClient.put(`/positions/${id}`, data),
-  remove: (id) => axiosClient.delete(`/positions/${id}`),
+  getAll: (params) => axiosClient.get('/teacher-positions', { params }),
+
+  create: async (data) => {
+    const res = await axiosClient.post('/teacher-positions', data);
+    return res.data;
+  },
+
+  update: (id, data) => axiosClient.put(`/teacher-positions/${id}`, data),
+
+  remove: (id) => axiosClient.delete(`/teacher-positions/${id}`),
 };
 
 export default positionApi;

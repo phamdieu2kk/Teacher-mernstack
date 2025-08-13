@@ -1,176 +1,197 @@
-// src/pages/Teachers.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
-  Box, Typography, Table, TableHead, TableRow, TableCell, TableBody, Paper,
-  Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions,
-  InputAdornment, Pagination, Select, MenuItem, FormControl, InputLabel, Chip, Stack
+  Breadcrumbs, Container, Typography, Button, CircularProgress, Snackbar, Alert,
+  Box, TextField, InputAdornment,
+  useMediaQuery, useTheme,
 } from '@mui/material';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import SearchIcon from '@mui/icons-material/Search';
-import AddIcon from '@mui/icons-material/Add';
-import teacherApi from '../api/teacherApi'; // ✅ đúng
+import RefreshIcon from '@mui/icons-material/Refresh';
+
+import teacherApi from '../api/teacherApi';
+import TeacherForm from './TeacherForm';
+import TeacherTable from '../components/TeacherTable';
 
 const Teachers = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   const [teachers, setTeachers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [openForm, setOpenForm] = useState(false);
+  const [editingTeacher, setEditingTeacher] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [total, setTotal] = useState(0);
 
-  const [open, setOpen] = useState(false);
-  const [editTeacher, setEditTeacher] = useState(null);
-  const [form, setForm] = useState({ fullname: '', email: '', phone: '', code: '', academic_level: '' });
+  const pageCount = Math.ceil(total / rowsPerPage);
+
+  const fetchTeachers = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await teacherApi.getAll({ page, limit: rowsPerPage, search: searchTerm });
+      setTeachers(res.data || []);
+      setTotal(res.total || 0);
+    } catch (err) {
+      setError('Không thể tải danh sách giáo viên. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
+  }, [page, rowsPerPage, searchTerm]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchTeachers();
+  }, [fetchTeachers]);
 
-  const fetchData = async () => {
-    const res = await teacherApi.getAll();
-    setTeachers(res.data);
+  const handleChangePage = (_, newPage) => setPage(newPage);
+  const handleChangeRowsPerPage = (e) => {
+    setRowsPerPage(parseInt(e.target.value, 10));
+    setPage(1);
   };
 
-  const handleOpen = (teacher = null) => {
-    setEditTeacher(teacher);
-    setForm(
-      teacher || { fullname: '', email: '', phone: '', code: '', academic_level: '' }
-    );
-    setOpen(true);
+  const handleCloseForm = () => {
+    setOpenForm(false);
+    setEditingTeacher(null);
   };
 
-  const handleClose = () => setOpen(false);
-
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleAdd = () => {
+    setEditingTeacher(null);
+    setOpenForm(true);
   };
-
-  const handleSubmit = async () => {
-    if (editTeacher) {
-      await teacherApi.update(editTeacher._id, form);
-    } else {
-      await teacherApi.add(form);
-    }
-    fetchData();
-    handleClose();
-  };
-
-  const handleDelete = async (id) => {
-    await teacherApi.delete(id);
-    fetchData();
-  };
-
-  const filteredTeachers = teachers.filter((t) =>
-    Object.values(t).some((val) =>
-      String(val).toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
-
-  const paginatedTeachers = filteredTeachers.slice(
-    (page - 1) * rowsPerPage,
-    page * rowsPerPage
-  );
 
   return (
-    <Box>
-      <Typography variant="h5" component="h1" gutterBottom>
-        Danh sách giáo viên
-      </Typography>
-
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <TextField
-          variant="outlined"
-          size="small"
-          placeholder="Tìm kiếm..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-          sx={{ width: 300 }}
-        />
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpen()}>
-          Thêm giáo viên
-        </Button>
+    <Container maxWidth="xl" sx={{ mt: 2 }}>
+      <Box mb={2}>
+        <Breadcrumbs aria-label="breadcrumb">
+          <Typography
+            color="text.primary"
+            fontSize={isMobile ? '0.9rem' : '1rem'}
+            sx={{ color: '#4a148c', fontWeight: 600 }} // chữ tím đậm
+          >
+            Giáo viên
+          </Typography>
+        </Breadcrumbs>
       </Box>
 
-      <Paper>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Mã</TableCell>
-              <TableCell>Giáo viên</TableCell>
-              <TableCell>Học vấn</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>SĐT</TableCell>
-              <TableCell>Hành động</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {paginatedTeachers.map((t) => (
-              <TableRow key={t._id}>
-                <TableCell>{t.code}</TableCell>
-                <TableCell>{t.fullname}</TableCell>
-                <TableCell>{t.academic_level}</TableCell>
-                <TableCell>{t.email}</TableCell>
-                <TableCell>{t.phone}</TableCell>
-                <TableCell>
-                  <Stack direction="row" spacing={1}>
-                    <Button size="small" variant="outlined" onClick={() => handleOpen(t)}>Sửa</Button>
-                    <Button size="small" color="error" onClick={() => handleDelete(t._id)}>Xoá</Button>
-                  </Stack>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Paper>
-
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2, alignItems: 'center' }}>
-        <Typography variant="body2">Tổng: {filteredTeachers.length}</Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <FormControl size="small" sx={{ minWidth: 80, mr: 2 }}>
-            <InputLabel id="rows-per-page">Số hàng</InputLabel>
-            <Select
-              labelId="rows-per-page"
-              value={rowsPerPage}
-              label="Số hàng"
-              onChange={(e) => {
-                setRowsPerPage(parseInt(e.target.value, 10));
-                setPage(1);
+      <Box
+        sx={{
+          bgcolor: '#f3e5f5', // nền tím nhạt đồng bộ sidebar
+          borderRadius: 2,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          p: 3,
+          minHeight: '60vh',
+        }}
+      >
+        <Box
+          display="flex"
+          flexDirection={isMobile ? 'column' : 'row'}
+          justifyContent="flex-end"
+          alignItems={isMobile ? 'stretch' : 'center'}
+          mb={2}
+          gap={1}
+        >
+          <Box display="flex" alignItems="center" flexWrap="wrap" gap={1} flexGrow={isMobile ? 1 : 0}>
+            <TextField
+              size="small"
+              placeholder="Tìm kiếm thông tin"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              sx={{
+                width: isMobile ? '100%' : 250,
+                '& .MuiInputBase-root': {
+                  borderRadius: '20px',
+                  bgcolor: '#ffffffff', // tím nhạt nền input
+                  height: 32,
+                  color: '#4a148c', // chữ tím đậm
+                },
+                '& .MuiInputBase-input': { fontSize: '0.85rem', p: '6px 12px' },
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ fontSize: 18, color: '#4a148c' }} /> {/* icon tím đậm */}
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<RefreshIcon sx={{ fontSize: 16, color: '#4a148c' }} />}
+              onClick={fetchTeachers}
+              sx={{
+                p: '2px 12px',
+                fontSize: '0.8rem',
+                textTransform: 'none',
+                borderColor: '#4a148c',
+                color: '#4a148c',
+                height: 32,
+                '&:hover': {
+                  borderColor: '#7b1fa2',
+                  bgcolor: '#d1c4e9', // tím nhạt hơn khi hover
+                  color: '#7b1fa2',
+                },
               }}
             >
-              <MenuItem value={5}>5</MenuItem>
-              <MenuItem value={10}>10</MenuItem>
-              <MenuItem value={20}>20</MenuItem>
-            </Select>
-          </FormControl>
-          <Pagination
-            count={Math.ceil(filteredTeachers.length / rowsPerPage)}
-            page={page}
-            onChange={(e, value) => setPage(value)}
-            color="primary"
-          />
+              Tải lại
+            </Button>
+
+            <Box mt={isMobile ? 1 : 0} sx={{ width: isMobile ? '100%' : 'auto' }}>
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={<PersonAddIcon sx={{ fontSize: 16, color: '#fff' }} />}
+                onClick={handleAdd}
+                sx={{
+                  p: '2px 12px',
+                  fontSize: '0.8rem',
+                  textTransform: 'none',
+                  bgcolor: '#4a148c', // tím đậm
+                  color: '#f3e5f5', // tím nhạt chữ
+                  height: 32,
+                  '&:hover': {
+                    bgcolor: '#7b1fa2',
+                  },
+                  width: isMobile ? '100%' : 'auto',
+                }}
+              >
+                Tạo mới
+              </Button>
+            </Box>
+          </Box>
         </Box>
+
+        <TeacherTable
+          teachers={teachers}
+          loading={loading}
+          error={error}
+          page={page}
+          pageCount={pageCount}
+          rowsPerPage={rowsPerPage}
+          total={total}
+          onEdit={(teacher) => {
+            setEditingTeacher(teacher);
+            setOpenForm(true);
+          }}
+          onChangePage={handleChangePage}
+          onChangeRowsPerPage={handleChangeRowsPerPage}
+          isMobile={isMobile}
+        />
       </Box>
 
-      {/* ModalForm */}
-      <Dialog open={open} onClose={handleClose}>
-        <DialogTitle>{editTeacher ? 'Cập nhật' : 'Thêm'} giáo viên</DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-          <TextField name="fullname" label="Họ tên" value={form.fullname} onChange={handleChange} />
-          <TextField name="email" label="Email" value={form.email} onChange={handleChange} />
-          <TextField name="phone" label="SĐT" value={form.phone} onChange={handleChange} />
-          <TextField name="code" label="Mã GV" value={form.code} onChange={handleChange} />
-          <TextField name="academic_level" label="Học vấn" value={form.academic_level} onChange={handleChange} />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Huỷ</Button>
-          <Button onClick={handleSubmit} variant="contained">Lưu</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+      <TeacherForm
+        open={openForm}
+        onClose={handleCloseForm}
+        onSave={() => {
+          setOpenForm(false);
+          fetchTeachers();
+        }}
+        teacher={editingTeacher}
+      />
+    </Container>
   );
 };
 
