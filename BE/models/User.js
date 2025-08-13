@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema({
   identity: { type: String, default: '' },
   dob: { type: Date },
   gender: { type: String, default: '' },       // thêm nếu bạn muốn lưu
-=
+
   isDeleted: { type: Boolean, default: false },
   role: { type: String, enum: ['STUDENT', 'TEACHER', 'ADMIN'], default: 'STUDENT' },
 }, { timestamps: true });
